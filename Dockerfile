@@ -1,24 +1,27 @@
-# Step 1: Build the WAR file using Maven
-FROM maven:3.8.6-openjdk-17 AS build
+# Use a Maven image to build the application
+FROM maven:3.8.5-openjdk-17 AS build
 
-
-# Set the working directory for the Maven build
+# Set the working directory inside the container
 WORKDIR /app
 
-# Copy the pom.xml and source code
-COPY pom.xml /app/
-COPY src /app/src/
+# Copy the Maven project files to the container
+COPY pom.xml .
+COPY src ./src
 
-# Build the project (this should generate the WAR file)
-RUN mvn clean package -DskipTests
+# Build the application and package it as a WAR file
+RUN mvn clean package
 
-# Step 2: Create the Tomcat image and copy the WAR file
+# Use the official Tomcat image as a base for running the application
 FROM tomcat:9.0.73-jdk17
 
-# Expose the Tomcat port
+# Expose port 8100
 EXPOSE 8100
 
-# Copy the WAR file from the build stage to the Tomcat webapps directory
+# Copy the generated WAR file from the build stage to Tomcat's webapps directory
 COPY --from=build /app/target/java-tomcat-maven-example.war /usr/local/tomcat/webapps/java-tomcat-maven-example.war
 
-# Start Tomcat (this is already the default entrypoint for the Tomcat image)
+# Configure Tomcat to use port 8100
+RUN sed -i 's/8080/8100/g' /usr/local/tomcat/conf/server.xml
+
+# Start Tomcat
+CMD ["catalina.sh", "run"]
