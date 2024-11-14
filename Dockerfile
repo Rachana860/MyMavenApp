@@ -1,30 +1,27 @@
-# Step 1: Build the Maven Project
-FROM maven:3.8.6-openjdk-11 as build
+# Use a Maven image to build the application
+FROM maven:3.8.5-openjdk-17 AS build
 
 # Set the working directory inside the container
 WORKDIR /app
 
-# Clone the repository (or copy the contents if the project is on your local machine)
-# This assumes that you have the code inside your Docker build context (with `git` installed).
-RUN git clone https://github.com/Rachana860/MyMavenApp.git /app
+# Copy the Maven project files to the container
+COPY pom.xml .
+COPY src ./src
 
-# Build the application using Maven
-WORKDIR /app
-RUN mvn clean install -DskipTests
+# Build the application and package it as a WAR file
+RUN mvn clean package
 
-# Step 2: Deploy the WAR file to the remote Tomcat
-FROM busybox:1.35.0-uclibc
+# Use the official Tomcat image as a base for running the application
+FROM tomcat:9.0.73-jdk17
 
-# Install curl to be able to send HTTP requests
-RUN apk add --no-cache curl
+# Expose port 8100
+EXPOSE 8100
 
-# Set the working directory
-WORKDIR /deploy
+# Copy the generated WAR file from the build stage to Tomcat's webapps directory
+COPY --from=build /app/target/java-tomcat-maven-example.war /usr/local/tomcat/webapps/java-tomcat-maven-example.war
 
-# Copy the WAR file from the build stage
-COPY --from=build /app/target/MyMavenApp.war /deploy/
+# Configure Tomcat to use port 8100
+RUN sed -i 's/8080/8100/g' /usr/local/tomcat/conf/server.xml
 
-# Step 3: Deploy the WAR file to Tomcat via HTTP
-# This will use curl to deploy the WAR file to Tomcat's Manager app
-CMD curl -u "jenkins:Tomcat@123" -T /deploy/MyMavenApp.war \
-    "http://172.16.51.26:8100/manager/text/deploy?path=/MyMavenApp&update=true"
+# Start Tomcat
+CMD ["catalina.sh", "run"]
