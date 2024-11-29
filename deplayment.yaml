@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: javaapp1
+  labels:
+    app: javaapp1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: javaapp1
+  template:
+    metadata:
+      labels:
+        app: javaapp1
+    spec:
+      containers:
+      - name: javaapp1
+        image: neehar2601/javaapp2:v1
+        ports:
+        - containerPort: 8080
